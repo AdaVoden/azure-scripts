@@ -1,0 +1,1 @@
+To gain experience with Azure's CLI, I created a basic parametrized script to build a VM, enable backup for it and activate monitoring it with basic alerts.

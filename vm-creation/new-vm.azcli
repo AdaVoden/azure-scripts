@@ -1,0 +1,120 @@
+#!/bin/bash
+# Script to create a new Azure Virtual Machine using Azure CLI, with moniotoring and backup configurations.
+# One must already be logged in to the Azure CLI before running this script.
+# Usage: az cli script to create a new VM with specified parameters.
+
+# PARAMETERS
+##################################################
+
+# Network parameters
+VNET_NAME="project1-vnet"
+SUBNET_NAME="project1-subnet"
+
+# VM parameters
+VM_NAME='project1-vm'
+IMAGE="Ubuntu2404"
+SIZE='Standard_D2s_v3'  # Adjust size as needed
+ADMIN_USERNAME="azureuser"
+ADMIN_PASSWORD='Sz@jpc!Y2oHo*q'
+# Ensure this meets Azure's password complexity requirements
+# Note: Hardcoding passwords in scripts is not recommended for production environments.
+# This is for demonstration purposes only.
+
+# Backup Parameters
+BACKUP_VAULT_NAME="project1-backup-vault"
+BACKUP_POLICY_NAME="project1-backup-policy"
+
+# Monitoring Parameters
+LOG_ANALYTICS_WORKSPACE_NAME="project1-law"
+
+# Action group parameters
+ACTION_GROUP_NAME="project1-action-group"
+ACTION_GROUP_SHORT_NAME="proj1ag"
+EMAIL_RECEIVER_NAME='admin-email'
+EMAIL_ADDRESS='your-email@example.com'  # Replace with your email address
+
+##################################################
+
+# Create a resource group. Bare minimum requirement for any Azure resource.
+RGROUP=$(az group create --resource-group project1-rg --location westus2 --query name --output tsv)
+RGROUP_FIXED=$(echo $RGROUP | tr -d '\r') # Remove any carriage return characters
+
+# Create the network components. Everything needs a vnet.
+az network vnet create \
+    --resource-group $RGROUP_FIXED \
+    --name $VNET_NAME \
+    --address-prefixes "10.0.0.0/16" \
+    --subnet-name $SUBNET_NAME \
+    --subnet-prefixes "10.0.0.0/24"
+
+# Create the virtual machine. Cannot proceed without a VM.
+az vm create \
+    --resource-group $RGROUP_FIXED \
+    --name $VM_NAME \
+    --image $IMAGE \
+    --size $SIZE \
+    --admin-username $ADMIN_USERNAME \
+    --admin-password $ADMIN_PASSWORD \
+    --vnet-name $VNET_NAME \
+    --subnet $SUBNET_NAME 
+    # Will not be accessible from the internet.
+
+# Create a backup vault
+az backup vault create \
+    --resource-group $RGROUP_FIXED \
+    --name $BACKUP_VAULT_NAME \
+    --location westus2 
+# EastUS is used here for demonstration, but choose a region close to you or your users.
+# Possibly across multiple regions for redundancy.
+
+# Enable backup for the VM
+az backup protection enable-for-vm \
+    --resource-group $RGROUP_FIXED \
+    --vault-name $BACKUP_VAULT_NAME \
+    --vm $VM_NAME \
+    --policy-name DefaultPolicy
+    
+# Create a Log Analytics workspace for monitoring
+az monitor log-analytics workspace create \
+    --resource-group $RGROUP_FIXED \
+    --workspace-name $LOG_ANALYTICS_WORKSPACE_NAME
+
+# Create action group for alerts (email notification)
+az monitor action-group create \
+    --resource-group $RGROUP_FIXED \
+    --name $ACTION_GROUP_NAME \
+    --short-name $ACTION_GROUP_SHORT_NAME \
+    --email-receivers name=$EMAIL_RECEIVER_NAME email-address=$EMAIL_ADDRESS
+# Note: Replace $EMAIL_ADDRESS with a valid email address to receive alerts.
+# This action group can be used in alert rules to notify via email.
+
+# Example alerts
+# CPU Percentage Alert
+az monitor metrics alert create \
+    --name "HighCPUAlert" \
+    --resource-group $RGROUP_FIXED \
+    --scopes $(az vm show --resource-group $RGROUP_FIXED--name $VM_NAME --query id --output tsv) \
+    --condition "avg Percentage CPU > 80" \
+    --description "Alert when CPU usage exceeds 80%" \
+    --action-group $ACTION_GROUP_NAME
+
+# Disk Percentage Alert
+az monitor metrics alert create \
+    --name "HighDiskAlert" \
+    --resource-group $RGROUP_FIXED \
+    --scopes $(az vm show --resource-group $RGROUP_FIXED --name $VM_NAME --query id --output tsv) \
+    --condition "avg LogicalDisk % Free Space < 20" \
+    --description "Alert when disk free space is below 20%" \
+    --action-group $ACTION_GROUP_NAME
+
+# Memory Percentage Alert
+az monitor metrics alert create \
+    --name "HighMemoryAlert" \
+    --resource-group $RGROUP_FIXED \
+    --scopes $(az vm show --resource-group $RGROUP_FIXED --name $VM_NAME --query id --output tsv) \
+    --condition "avg Memory % Committed Bytes In Use > 80" \
+    --description "Alert when memory usage exceeds 80%" \
+    --action-group $ACTION_GROUP_NAME
+
+echo "Azure VM '$VM_NAME' created successfully in resource group '$RGROUP_FIXED' with monitoring and backup configured."
+# End of script
