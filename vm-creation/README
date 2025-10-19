@@ -1,1 +1,26 @@
 To gain experience with Azure's CLI, I created a basic parametrized script to build a VM, enable backup for it and activate monitoring it with basic alerts.
+
+### Usage
+
+Install az cli, modify all parameters within the script file then
+
+```bash
+chmod +x ./new-vm.azcli
+./new-vm.azcli
+```
+
+`chmod +x` ensures that the script is executable.
+
+### Issues during development
+
+During production, it was found the command to create the resource group and bring back the name returned with a carriage return, causing all subsequent commands to fail.
+
+To fix this, I investigated the `--debug` command of the VNet creation, finding an extra set of characters in every mention of the resource group. I tested this against hard coding the resource group name, and found that the hard coded version worked.
+
+I then had to trim the carriage return via `tr -d '\r'`, which removes all carriage returns from the input text.
+
+At this point, the script ran.
+
+### TODO
+
+- [ ] Monitoring setup fails due to requiring a Dict type for `az monitor action-group create`

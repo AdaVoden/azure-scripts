@@ -37,6 +37,7 @@ EMAIL_ADDRESS='your-email@example.com'  # Replace with your email address
 
 # Create a resource group. Bare minimum requirement for any Azure resource.
 RGROUP=$(az group create --resource-group project1-rg --location westus2 --query name --output tsv)
+# Above command returns with a carriage return character, which can cause issues in subsequent commands.
 RGROUP_FIXED=$(echo $RGROUP | tr -d '\r') # Remove any carriage return characters
 
 # Create the network components. Everything needs a vnet.
