@@ -1,6 +1,8 @@
 To gain experience with Azure's CLI, I created a basic parametrized script to build a VM, enable backup for it and activate monitoring it with basic alerts.
 
-### Usage
+## Usage
+
+### Azure CLI
 
 Install az cli, modify all parameters within the script file then
 
@@ -11,7 +13,23 @@ chmod +x ./new-vm.azcli
 
 `chmod +x` ensures that the script is executable.
 
-### Issues during development
+### Terraform
+
+Ensure that you are logged in, have a Service Principal and have set up your environment variables such as in this tutorial: https://developer.hashicorp.com/terraform/tutorials/azure-get-started/azure-build
+
+After, simply run
+```bash
+terraform apply
+```
+
+To remove all the assets created run
+```bash
+terraform destroy
+```
+
+## Issues during development
+
+### Azure CLI
 
 During production, it was found the command to create the resource group and bring back the name returned with a carriage return, causing all subsequent commands to fail.
 
@@ -21,6 +39,10 @@ I then had to trim the carriage return via `tr -d '\r'`, which removes all carri
 
 At this point, the script ran.
 
-### TODO
+### Terraform
+
+The `project1-backup-vault`, a recovery services vault, was created but did not successfully respond to Terraform and had to be manually imported.
+
+## TODO
 
 - [ ] Monitoring setup fails due to requiring a Dict type for `az monitor action-group create`
